@@ -6,14 +6,14 @@
 
 package org.hyperledger.fabric.gateway;
 
+import org.hyperledger.fabric.gateway.impl.GatewayImpl;
+import org.hyperledger.fabric.gateway.spi.CommitHandlerFactory;
+import org.hyperledger.fabric.gateway.spi.QueryHandlerFactory;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Path;
 import java.util.concurrent.TimeUnit;
-
-import org.hyperledger.fabric.gateway.impl.GatewayImpl;
-import org.hyperledger.fabric.gateway.spi.CommitHandlerFactory;
-import org.hyperledger.fabric.gateway.spi.QueryHandlerFactory;
 
 /**
  * The Gateway provides the connection point for an application to access the Fabric network as a specific user. It is
@@ -166,6 +166,16 @@ public interface Gateway extends AutoCloseable {
          * @return The builder instance, allowing multiple configuration options to be chained.
          */
         Builder discovery(boolean enabled);
+
+        /**
+         * <em>Optional</em> - Enable or disable service deliverFilter for sends "filter" blocks, minimal sets of
+         * information about blocks that have been committed to the ledger.
+         * Service deliverFilter is disable by default.
+         * @param enabled - true to enable service deliver, false to enable deliverFilter
+         * @return The builder instance, allowing multiple configuration options to be chained.
+         */
+        Builder deliverFilter(boolean enabled);
+
 
         /**
          * Connects to the gateway using the specified options.
