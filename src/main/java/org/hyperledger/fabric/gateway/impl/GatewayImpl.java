@@ -28,6 +28,8 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
+import static java.lang.String.format;
+
 public final class GatewayImpl implements Gateway {
     private static final Log LOG = LogFactory.getLog(Gateway.class);
 
@@ -240,12 +242,46 @@ public final class GatewayImpl implements Gateway {
         if (networkName == null || networkName.isEmpty()) {
             throw new IllegalArgumentException("Channel name must be a non-empty string");
         }
+
         NetworkImpl network = networks.get(networkName);
         if (network == null) {
             Channel channel = client.getChannel(networkName);
             if (channel == null && networkConfig != null) {
                 try {
-                    channel = client.loadChannelFromConfig(networkName, networkConfig);
+                    channel =
+                            client.loadChannelFromConfig(
+                                    networkName,
+                                    networkConfig,
+                                    (networkConfig, client, channelArg, peerName, peerURL, peerProperties, peerOptions) -> {
+                                        try {
+                                            Peer peer = client.newPeer(peerName, peerURL, peerProperties);
+                                            if (this.isDeliverFilter()) {
+                                                peerOptions.registerEventsForFilteredBlocks();
+                                            }
+                                            channelArg.addPeer(peer, peerOptions);
+                                        } catch (Exception e) {
+                                            throw new NetworkConfigurationException(
+                                                    format(
+                                                            "Error on creating channel %s peer %s",
+                                                            channelArg.getName(),
+                                                            peerName
+                                                    ), e);
+                                        }
+                                    },
+                                    (networkConfig, client, channelArg, ordererName, ordererURL, ordererProperties) -> {
+                                        try {
+                                            Orderer orderer = client.newOrderer(ordererName, ordererURL, ordererProperties);
+                                            channelArg.addOrderer(orderer);
+                                        } catch (Exception e) {
+                                            throw new NetworkConfigurationException(
+                                                    format(
+                                                            "Error on creating channel %s orderer %s",
+                                                            channelArg.getName(),
+                                                            ordererName
+                                                    ), e);
+                                        }
+                                    }
+                            );
                 } catch (InvalidArgumentException | NetworkConfigurationException ex) {
                     LOG.info("Unable to load channel configuration from connection profile: " + ex.getLocalizedMessage());
                 }
@@ -256,8 +292,13 @@ public final class GatewayImpl implements Gateway {
                     // and the org's peer(s) has joined it with all roles
                     channel = client.newChannel(networkName);
                     for (Peer peer : getPeersForOrg()) {
-                        PeerOptions peerOptions = PeerOptions.createPeerOptions()
-                                .setPeerRoles(EnumSet.allOf(PeerRole.class));
+
+                        PeerOptions peerOptions = PeerOptions.createPeerOptions();
+                        if (this.isDeliverFilter()) {
+                            peerOptions.registerEventsForFilteredBlocks();
+                        }
+
+                        peerOptions.setPeerRoles(EnumSet.allOf(PeerRole.class));
                         channel.addPeer(peer, peerOptions);
                     }
                 } catch (InvalidArgumentException e) {
