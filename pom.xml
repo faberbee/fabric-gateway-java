@@ -282,11 +282,23 @@
         </plugins>
     </reporting>
 
+<!--    <distributionManagement>-->
+<!--        <snapshotRepository>-->
+<!--            <id>ossrh</id>-->
+<!--            <url>https://oss.sonatype.org/content/repositories/snapshots</url>-->
+<!--        </snapshotRepository>-->
+<!--    </distributionManagement>-->
     <distributionManagement>
         <snapshotRepository>
-            <id>ossrh</id>
-            <url>https://oss.sonatype.org/content/repositories/snapshots</url>
+            <id>faberbee-snapshots</id>
+            <name>Snapshots Repository</name>
+            <url>http://nexus3-devops.172.16.2.117.nip.io/repository/faberbee-snapshots</url>
         </snapshotRepository>
+        <repository>
+            <id>faberbee-releases</id>
+            <name>Releases Repository</name>
+            <url>http://nexus3-devops.172.16.2.117.nip.io/repository/faberbee-releases</url>
+        </repository>
     </distributionManagement>
     <profiles>
         <profile>
