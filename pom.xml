@@ -35,8 +35,8 @@
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <maven.compiler.source>8</maven.compiler.source>
-        <maven.compiler.target>8</maven.compiler.target>
+        <javaVersion>8</javaVersion>
+        <javadoc.version>3.3.2</javadoc.version>
     </properties>
 
     <repositories>
@@ -56,31 +56,31 @@
         <dependency>
             <groupId>org.junit.platform</groupId>
             <artifactId>junit-platform-launcher</artifactId>
-            <version>1.6.2</version>
+            <version>1.8.2</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-engine</artifactId>
-            <version>5.6.2</version>
+            <version>5.8.2</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-params</artifactId>
-            <version>5.6.2</version>
+            <version>5.8.2</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.junit.vintage</groupId>
             <artifactId>junit-vintage-engine</artifactId>
-            <version>5.6.2</version>
+            <version>5.8.2</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.assertj</groupId>
             <artifactId>assertj-core</artifactId>
-            <version>3.16.1</version>
+            <version>3.22.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -91,30 +91,30 @@
         <dependency>
             <groupId>org.mockito</groupId>
             <artifactId>mockito-core</artifactId>
-            <version>3.3.3</version>
+            <version>4.4.0</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>io.cucumber</groupId>
             <artifactId>cucumber-java8</artifactId>
-            <version>5.7.0</version>
+            <version>7.2.3</version>
             <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>io.cucumber</groupId>
             <artifactId>cucumber-junit</artifactId>
-            <version>5.7.0</version>
+            <version>7.2.3</version>
             <scope>test</scope>
         </dependency>
         <dependency><!-- override the version under cloudant-client -->
             <groupId>commons-codec</groupId>
             <artifactId>commons-codec</artifactId>
-            <version>1.14</version>
+            <version>1.15</version>
         </dependency>
         <dependency>
-            <groupId>com.cloudant</groupId>
-            <artifactId>cloudant-client</artifactId>
-            <version>2.19.0</version>
+            <groupId>com.ibm.cloud</groupId>
+            <artifactId>cloudant</artifactId>
+            <version>0.0.36</version>
         </dependency>
     </dependencies>
 
@@ -143,6 +143,8 @@
                     <artifactId>maven-compiler-plugin</artifactId>
                     <version>3.8.1</version>
                     <configuration>
+                        <source>${javaVersion}</source>
+                        <target>${javaVersion}</target>
                         <showDeprecation>true</showDeprecation>
                         <showWarnings>true</showWarnings>
                         <compilerArgs>
@@ -156,7 +158,7 @@
                 </plugin>
                 <plugin>
                     <artifactId>maven-surefire-plugin</artifactId>
-                    <version>3.0.0-M4</version>
+                    <version>3.0.0-M5</version>
                     <configuration>
                         <excludes>
                             <exclude>**/scenario/**</exclude>
@@ -232,10 +234,10 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-javadoc-plugin</artifactId>
-                <version>3.0.1</version>
+                <version>${javadoc.version}</version>
                 <configuration>
                     <excludePackageNames>
-                        org.hyperledger.fabric.gateway.impl
+                        org.hyperledger.fabric.gateway.impl:org.hyperledger.fabric.gateway.impl.*
                     </excludePackageNames>
                     <show>public</show>
                     <doctitle>Hyperledger Fabric Gateway SDK for Java</doctitle>
@@ -244,41 +246,16 @@
                     <links>
                         <link>https://docs.oracle.com/javase/8/docs/api/</link>
                     </links>
+                    <source>${javaVersion}</source>
+                    <additionalJOptions>
+                        <additionalJOption>${additionalJavadocOpts}</additionalJOption>
+                    </additionalJOptions>
                 </configuration>
                 <executions>
                     <execution>
                         <id>attach-javadocs</id>
                         <goals>
                             <goal>jar</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-checkstyle-plugin</artifactId>
-                <version>3.1.0</version>
-                <configuration>
-                    <configLocation>checkstyle.xml</configLocation>
-                    <encoding>UTF-8</encoding>
-                    <consoleOutput>true</consoleOutput>
-                    <failsOnError>true</failsOnError>
-                    <linkXRef>false</linkXRef>
-                    <propertyExpansion>basedir=${project.basedir}</propertyExpansion>
-                </configuration>
-                <dependencies>
-                    <dependency>
-                        <groupId>com.puppycrawl.tools</groupId>
-                        <artifactId>checkstyle</artifactId>
-                        <version>8.30</version>
-                    </dependency>
-                </dependencies>
-                <executions>
-                    <execution>
-                        <id>compile</id>
-                        <phase>compile</phase>
-                        <goals>
-                            <goal>check</goal>
                         </goals>
                     </execution>
                 </executions>
@@ -302,13 +279,61 @@
     </distributionManagement>
     <profiles>
         <profile>
+            <id>checkstyle</id>
+            <activation>
+                <jdk>[11,)</jdk>
+            </activation>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-checkstyle-plugin</artifactId>
+                        <version>3.1.2</version>
+                        <configuration>
+                            <configLocation>checkstyle.xml</configLocation>
+                            <encoding>UTF-8</encoding>
+                            <consoleOutput>true</consoleOutput>
+                            <failsOnError>true</failsOnError>
+                            <linkXRef>false</linkXRef>
+                            <propertyExpansion>basedir=${project.basedir}</propertyExpansion>
+                        </configuration>
+                        <dependencies>
+                            <dependency>
+                                <groupId>com.puppycrawl.tools</groupId>
+                                <artifactId>checkstyle</artifactId>
+                                <version>10.0</version>
+                            </dependency>
+                        </dependencies>
+                        <executions>
+                            <execution>
+                                <id>compile</id>
+                                <phase>compile</phase>
+                                <goals>
+                                    <goal>check</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+        <profile>
             <id>owasp</id>
             <build>
                 <plugins>
                     <plugin>
                         <groupId>org.owasp</groupId>
                         <artifactId>dependency-check-maven</artifactId>
-                        <version>3.2.0</version>
+                        <version>7.0.1</version>
+                        <configuration>
+                            <skipProvidedScope>true</skipProvidedScope>
+                            <skipTestScope>true</skipTestScope>
+                            <skipSystemScope>true</skipSystemScope>
+                            <failBuildOnCVSS>7</failBuildOnCVSS>
+                            <suppressionFiles>
+                                <suppressionFile>dependency-suppressions.xml</suppressionFile>
+                            </suppressionFiles>
+                        </configuration>
                         <executions>
                             <execution>
                                 <goals>
@@ -317,10 +342,17 @@
                             </execution>
                         </executions>
                     </plugin>
-
                 </plugins>
             </build>
-
+        </profile>
+        <profile>
+            <id>javadoc-no-module-directories</id>
+            <activation>
+                <jdk>[11,13)</jdk>
+            </activation>
+            <properties>
+                <additionalJavadocOpts>--no-module-directories</additionalJavadocOpts>
+            </properties>
         </profile>
         <profile>
             <id>release</id>
@@ -387,15 +419,22 @@
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-javadoc-plugin</artifactId>
-                        <version>2.10.4</version>
+                        <version>${javadoc.version}</version>
                         <configuration>
                             <excludePackageNames>
-                                org.hyperledger.fabric.gateway.impl
+                                org.hyperledger.fabric.gateway.impl:org.hyperledger.fabric.gateway.impl.*
                             </excludePackageNames>
                             <show>public</show>
                             <doctitle>Hyperledger Fabric Gateway SDK for Java</doctitle>
                             <nohelp>true</nohelp>
                             <failOnError>true</failOnError>
+                            <links>
+                                <link>https://docs.oracle.com/javase/8/docs/api/</link>
+                            </links>
+                            <source>${javaVersion}</source>
+                            <additionalJOptions>
+                                <additionalJOption>${additionalJavadocOpts}</additionalJOption>
+                            </additionalJOptions>
                         </configuration>
                         <executions>
                             <execution>
