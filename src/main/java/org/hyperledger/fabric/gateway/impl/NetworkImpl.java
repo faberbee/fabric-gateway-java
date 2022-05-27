@@ -47,16 +47,16 @@ public final class NetworkImpl implements Network, AutoCloseable {
         this.channel = channel;
         this.gateway = gateway;
 
-        initializeChannel();
+        initializeChannel(this.gateway.isDeliverFilter());
 
         channelBlockSource = BlockEventSourceFactory.getInstance().newBlockEventSource(channel);
         orderedBlockSource = new OrderedBlockEventSource(channelBlockSource);
         queryHandler = gateway.getQueryHandlerFactory().create(this);
     }
 
-    private void initializeChannel() {
+    private void initializeChannel(final boolean deliverFilter) {
         try {
-            channel.initialize();
+            channel.initialize(deliverFilter);
         } catch (InvalidArgumentException | TransactionException e) {
             throw new GatewayRuntimeException("Failed to initialize channel", e);
         }

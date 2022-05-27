@@ -6,47 +6,23 @@
 
 package org.hyperledger.fabric.gateway.impl;
 
-import java.io.BufferedInputStream;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.file.Path;
-import java.security.cert.CertificateException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.EnumSet;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.concurrent.TimeUnit;
-
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.hyperledger.fabric.gateway.DefaultCommitHandlers;
-import org.hyperledger.fabric.gateway.DefaultQueryHandlers;
-import org.hyperledger.fabric.gateway.Gateway;
-import org.hyperledger.fabric.gateway.GatewayRuntimeException;
-import org.hyperledger.fabric.gateway.Identities;
-import org.hyperledger.fabric.gateway.Identity;
-import org.hyperledger.fabric.gateway.Network;
-import org.hyperledger.fabric.gateway.Wallet;
-import org.hyperledger.fabric.gateway.X509Identity;
+import org.hyperledger.fabric.gateway.*;
 import org.hyperledger.fabric.gateway.impl.identity.X509IdentityProvider;
 import org.hyperledger.fabric.gateway.spi.CommitHandlerFactory;
 import org.hyperledger.fabric.gateway.spi.QueryHandlerFactory;
-import org.hyperledger.fabric.sdk.Channel;
+import org.hyperledger.fabric.sdk.*;
 import org.hyperledger.fabric.sdk.Channel.PeerOptions;
-import org.hyperledger.fabric.sdk.Enrollment;
-import org.hyperledger.fabric.sdk.HFClient;
-import org.hyperledger.fabric.sdk.NetworkConfig;
-import org.hyperledger.fabric.sdk.Peer;
 import org.hyperledger.fabric.sdk.Peer.PeerRole;
-import org.hyperledger.fabric.sdk.User;
 import org.hyperledger.fabric.sdk.exception.InvalidArgumentException;
 import org.hyperledger.fabric.sdk.exception.NetworkConfigurationException;
+
+import java.io.*;
+import java.nio.file.Path;
+import java.security.cert.CertificateException;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 public final class GatewayImpl implements Gateway {
     private static final Log LOG = LogFactory.getLog(Gateway.class);
@@ -62,6 +38,7 @@ public final class GatewayImpl implements Gateway {
     private final TimePeriod commitTimeout;
     private final QueryHandlerFactory queryHandlerFactory;
     private final boolean discovery;
+    private final boolean deliverFilter;
 
     public static final class Builder implements Gateway.Builder {
         private CommitHandlerFactory commitHandlerFactory = DefaultCommitHandlers.PREFER_MSPID_SCOPE_ALLFORTX;
@@ -72,6 +49,7 @@ public final class GatewayImpl implements Gateway {
         private HFClient client;
         private boolean discovery = false;
 
+        private boolean deliverFilter = false;
         private static final class ExposedByteArrayOutputStream extends ByteArrayOutputStream {
             public byte[] getInternalBuffer() {
                 return buf;
@@ -152,6 +130,12 @@ public final class GatewayImpl implements Gateway {
             return this;
         }
 
+        @Override
+        public Gateway.Builder deliverFilter(final boolean enabled) {
+            this.deliverFilter = enabled;
+            return this;
+        }
+
         public Builder client(final HFClient client) {
             this.client = client;
             return this;
@@ -168,6 +152,7 @@ public final class GatewayImpl implements Gateway {
         this.commitTimeout = builder.commitTimeout;
         this.queryHandlerFactory = builder.queryHandlerFactory;
         this.discovery = builder.discovery;
+        this.deliverFilter = builder.deliverFilter;
 
         if (builder.client != null) {
             // Only for testing!
@@ -200,6 +185,7 @@ public final class GatewayImpl implements Gateway {
         this.commitTimeout = that.commitTimeout;
         this.queryHandlerFactory = that.queryHandlerFactory;
         this.discovery = that.discovery;
+        this.deliverFilter = that.deliverFilter;
         this.networkConfig = that.networkConfig;
         this.identity = that.identity;
 
@@ -240,8 +226,13 @@ public final class GatewayImpl implements Gateway {
                     // and the org's peer(s) has joined it with all roles
                     channel = client.newChannel(networkName);
                     for (Peer peer : getPeersForOrg()) {
-                        PeerOptions peerOptions = PeerOptions.createPeerOptions()
-                                .setPeerRoles(EnumSet.allOf(PeerRole.class));
+                        PeerOptions peerOptions = PeerOptions.createPeerOptions();
+
+                        if (this.isDeliverFilter()) {
+                            peerOptions.registerEventsForFilteredBlocks();
+                        }
+
+                        peerOptions.setPeerRoles(EnumSet.allOf(PeerRole.class));
                         channel.addPeer(peer, peerOptions);
                     }
                 } catch (InvalidArgumentException e) {
@@ -278,6 +269,10 @@ public final class GatewayImpl implements Gateway {
 
     public boolean isDiscoveryEnabled() {
         return discovery;
+    }
+
+    public boolean isDeliverFilter() {
+        return deliverFilter;
     }
 
     public GatewayImpl newInstance() {
